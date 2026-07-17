@@ -1,0 +1,16 @@
+{
+  "name": "גיבורי גביע העולם – World Cup Heroes",
+  "short_name": "WC Heroes",
+  "description": "Lemmings-style football puzzle game",
+  "start_url": "/index.html",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#0a0e1a",
+  "theme_color": "#1a2340",
+  "lang": "he",
+  "dir": "rtl",
+  "icons": [
+    { "src": "assets/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "assets/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
