@@ -53,6 +53,7 @@ export class HUD {
       btn.className = 'skill-btn';
       btn.id = `skill-${key}`;
       btn.dataset.skill = key;
+      btn.title = `בחר ${SKILL_NAMES_HE[key]}`;
       btn.innerHTML = `
         <span class="skill-icon">${SKILL_ICONS[key]}</span>
         <span class="skill-name">${SKILL_NAMES_HE[key]}</span>
@@ -74,6 +75,12 @@ export class HUD {
       this.selectedSkill = skill;
       this.game.selectSkill(skill);
     }
+  }
+
+  selectSkillByKeyboard(skill) {
+    const btn = document.getElementById(`skill-${skill}`);
+    if (!btn || btn.disabled || this.selectedSkill === skill) return;
+    this._selectSkill(skill, btn);
   }
 
   updateSkillCount(skill, count) {
