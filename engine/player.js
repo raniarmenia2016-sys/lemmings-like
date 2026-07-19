@@ -56,6 +56,7 @@ export class Player {
     this.isSprinter  = false;
     this.type        = PLAYER_TYPES[id % PLAYER_TYPES.length];
     this.highlight   = false;   // hover/selection highlight
+    this.focused     = false;
     this.skillIcon   = null;
   }
 
@@ -383,6 +384,15 @@ export class Player {
       ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.arc(sx + this.w/2, sy + this.h/2, 18, 0, Math.PI*2);
+      ctx.stroke();
+    }
+    if (this.focused) {
+      ctx.restore();
+      ctx.save();
+      ctx.strokeStyle = '#00ff88';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(sx + this.w/2, sy + this.h/2, 22, 0, Math.PI*2);
       ctx.stroke();
     }
     ctx.restore();
