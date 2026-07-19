@@ -47,6 +47,7 @@ html, body {
   position: fixed;
   top: 0; left: 50%;
   transform: translateX(-50%);
+  transform-origin: top center;
   width: 1280px; height: 720px;
   pointer-events: none;
   display: flex;
@@ -316,6 +317,35 @@ html, body {
 .ls-card-meta { font-size: 9px; color: var(--c-muted); }
 .ls-stars     { font-size: 14px; margin-top: 4px; }
 .ls-lock      { font-size: 20px; position: absolute; bottom: 8px; right: 8px; }
+
+#ls-keyboard-help {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 4px 10px;
+  padding: 7px 10px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--c-border);
+  border-radius: 6px;
+  color: var(--c-muted);
+  font-size: 11px;
+  line-height: 1.35;
+  text-align: center;
+}
+#ls-keyboard-help strong { color: var(--c-gold); }
+#ls-keyboard-help small { flex-basis: 100%; font-size: 10px; }
+#ls-keyboard-help kbd {
+  display: inline-block;
+  min-width: 18px;
+  padding: 0 3px;
+  background: #0d1a30;
+  border: 1px solid var(--c-border);
+  border-radius: 3px;
+  color: var(--c-text);
+  font-family: monospace;
+  font-size: 10px;
+}
 
 #ls-bottom { display: flex; justify-content: center; }
 #ls-designer-btn {
