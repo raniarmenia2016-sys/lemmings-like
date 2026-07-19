@@ -6,6 +6,7 @@ import { World, TILE_SIZE } from './engine/world.js';
 import { Player }           from './engine/player.js';
 import { HazardManager }    from './engine/hazards.js';
 import { TouchHandler }     from './engine/touch.js';
+import { KeyboardHandler }  from './engine/keyboard.js';
 import { HUD }              from './ui/hud.js';
 import { ComicScreen }      from './ui/comic.js';
 import { LevelSelectScreen }from './ui/levelSelect.js';
@@ -35,10 +36,12 @@ class Game {
     this._hazards   = null;
     this._hud       = null;
     this._touch     = null;
+    this._keyboard  = null;
     this._levelSelect = null;
     this._comic     = null;
     this._designer  = null;
     this._selectedSkill = null;
+    this._focusedPlayer = null;
     this._skillCounts   = {};
     this._spawnTimer    = 0;
     this._spawnedCount  = 0;
@@ -68,10 +71,13 @@ class Game {
         this.canvas.style.width  = ww + 'px';
         this.canvas.style.height = (ww / ratio) + 'px';
       }
+      const displayWidth = Math.min(ww, wh * ratio);
+      this.uiRoot.style.transform = `translateX(-50%) scale(${displayWidth / this.canvas.width})`;
     };
     window.addEventListener('resize', resize);
     resize();
     this._touch = new TouchHandler(this.canvas, this);
+    this._keyboard = new KeyboardHandler(this);
   }
 
   _initUI() {
@@ -89,7 +95,7 @@ class Game {
     this._levelSelect = new LevelSelectScreen(
       this.uiRoot,
       idx => { this._currentLevelIdx = idx; this._startLevel(LEVELS[idx]); },
-      ()  => { this._levelSelect.hide(); this._designer.show(); this.setState(GS.DESIGNER); },
+      ()  => this._showDesigner(),
       ()  => { this.returnToMenu(); }
     );
 
@@ -129,8 +135,8 @@ class Game {
       </div>
     `;
     this.uiRoot.appendChild(el);
-    document.getElementById('btn-play').onclick   = () => { el.style.display='none'; this._levelSelect.show(); this.setState(GS.LEVEL_SELECT); };
-    document.getElementById('btn-design').onclick = () => { el.style.display='none'; this._designer.show(); this.setState(GS.DESIGNER); };
+    document.getElementById('btn-play').onclick   = () => this._showLevelSelect();
+    document.getElementById('btn-design').onclick = () => this._showDesigner();
     document.getElementById('btn-how').onclick    = () => { document.getElementById('menu-howto').style.display='block'; };
     document.getElementById('btn-howclose').onclick = () => { document.getElementById('menu-howto').style.display='none'; };
     this._menuEl = el;
@@ -157,35 +163,69 @@ class Game {
     this._resultEl = el;
     document.getElementById('btn-retry').onclick  = () => { el.style.display='none'; this._startLevel(this._level); };
     document.getElementById('btn-next').onclick   = () => { el.style.display='none'; this._nextLevel(); };
-    document.getElementById('btn-levels').onclick = () => { el.style.display='none'; this._levelSelect.show(); this.setState(GS.LEVEL_SELECT); };
+    document.getElementById('btn-levels').onclick = () => this._showLevelSelect();
   }
 
   // ── State machine ────────────────────────────────────────
   setState(s) { this.state = s; }
 
-  _startLevel(levelData) {
+  _hideAllOverlays() {
+    this._menuEl.style.display = 'none';
     this._levelSelect.hide();
-    this._level       = levelData;
-    this._players     = [];
-    this._particles   = [];
-    this._spawnTimer  = 0;
-    this._spawnedCount= 0;
-    this._timeLeft    = levelData.timeLimit * 1000;
-    this._fastMode    = false;
-    this._selectedSkill = null;
-    this._skillCounts = { ...levelData.skills };
-    this._world       = new World(levelData, this.canvas);
-    this._hazards     = new HazardManager(this._world, this.canvas);
-    this._hazards.load(levelData.hazards ?? []);
-    this._hud.buildSkillBar(this._skillCounts);
-    this._hud.show();
+    this._designer.hide();
+    this._comic._el.style.display = 'none';
+    this._resultEl.style.display = 'none';
+    this._hud.hide();
+  }
 
-    if (levelData.comicWorld) {
-      this._hud.hide();
-      this.setState(GS.COMIC);
-      this._comic.show(levelData.comicWorld);
-    } else {
-      this.setState(GS.PLAYING);
+  _showLevelSelect() {
+    this._hideAllOverlays();
+    this._levelSelect.show();
+    this.setState(GS.LEVEL_SELECT);
+  }
+
+  _showDesigner() {
+    this._hideAllOverlays();
+    this._designer.show();
+    this.setState(GS.DESIGNER);
+  }
+
+  _startLevel(levelData) {
+    if (!levelData?.tiles || !levelData.entry || !levelData.exit) {
+      console.error('Cannot start an invalid level.', levelData);
+      this._showLevelSelect();
+      return;
+    }
+
+    this._hideAllOverlays();
+    this.setState(GS.PLAYING);
+
+    try {
+      this._level       = levelData;
+      this._players     = [];
+      this._particles   = [];
+      this._spawnTimer  = 0;
+      this._spawnedCount= 0;
+      this._timeLeft    = levelData.timeLimit * 1000;
+      this._fastMode    = false;
+      this._selectedSkill = null;
+      this._focusedPlayer = null;
+      this._skillCounts = { ...levelData.skills };
+      this._world       = new World(levelData, this.canvas);
+      this._hazards     = new HazardManager(this._world, this.canvas);
+      this._hazards.load(levelData.hazards ?? []);
+      this._hud.buildSkillBar(this._skillCounts);
+
+      if (levelData.comicWorld) {
+        this.setState(GS.COMIC);
+        this._comic.show(levelData.comicWorld);
+      } else {
+        this._hud.show();
+      }
+    } catch (error) {
+      console.error('Unable to start level.', error);
+      this._showLevelSelect();
+      alert('לא ניתן לפתוח את השלב. נסה לבחור שלב אחר.');
     }
   }
 
@@ -242,22 +282,28 @@ class Game {
       const dx = Math.abs(p.x + p.w/2 - wx);
       const dy = Math.abs(p.y + p.h/2 - wy);
       if (dx < 24 && dy < 24) {
-        // pause briefly for assignment
-        const wasState = this.state;
-        if (this._skillCounts[this._selectedSkill] > 0) {
-          const ok = p.assignSkill(this._selectedSkill);
-          if (ok) {
-            this._skillCounts[this._selectedSkill]--;
-            this._hud.updateSkillCount(this._selectedSkill, this._skillCounts[this._selectedSkill]);
-            this._addParticle(p.x+p.w/2, p.y, '#00ff88', 8);
-            // micro-pause 200ms
-            this.setState(GS.PAUSED);
-            setTimeout(() => { if (this.state===GS.PAUSED) this.setState(wasState); }, 200);
-          }
-        }
+        this._assignSkillToPlayer(p);
         break;
       }
     }
+  }
+
+  _assignSkillToPlayer(player) {
+    const skill = this._selectedSkill;
+    if (!skill || !player || this._skillCounts[skill] <= 0) return false;
+
+    const wasState = this.state;
+    const assigned = player.assignSkill(skill);
+    if (!assigned) return false;
+
+    this._skillCounts[skill]--;
+    this._hud.updateSkillCount(skill, this._skillCounts[skill]);
+    this._addParticle(player.x + player.w / 2, player.y, '#00ff88', 8);
+    this.setState(GS.PAUSED);
+    setTimeout(() => {
+      if (this.state === GS.PAUSED) this.setState(wasState);
+    }, 200);
+    return true;
   }
 
   highlightPlayerAt(cx, cy) {
@@ -272,6 +318,33 @@ class Game {
 
   clearHighlight() {
     this._players?.forEach(p => p.highlight = false);
+  }
+
+  focusNextPlayer(direction = 1) {
+    if (this.state !== GS.PLAYING || !this._players.length) return;
+    const candidates = this._players.filter(p => !p.dead && !p.safe);
+    if (!candidates.length) return;
+
+    const current = candidates.indexOf(this._focusedPlayer);
+    const next = current < 0
+      ? (direction < 0 ? candidates.length - 1 : 0)
+      : (current + direction + candidates.length) % candidates.length;
+    this._focusedPlayer = candidates[next];
+    this._players.forEach(p => p.focused = p === this._focusedPlayer);
+    this._world.scrollTo(this._focusedPlayer.x + this._focusedPlayer.w / 2);
+  }
+
+  selectSkillByKeyboard(skill) {
+    if (this.state !== GS.PLAYING) return;
+    this._hud.selectSkillByKeyboard(skill);
+  }
+
+  assignSkillToFocusedPlayer() {
+    if (this.state !== GS.PLAYING) return;
+    if (!this._focusedPlayer || this._focusedPlayer.dead || this._focusedPlayer.safe) {
+      this.focusNextPlayer();
+    }
+    this._assignSkillToPlayer(this._focusedPlayer);
   }
 
   scrollBy(delta) {
@@ -296,12 +369,13 @@ class Game {
   }
 
   returnToMenu() {
-    this._hud.hide();
-    this._levelSelect.hide();
-    this._designer.hide();
-    this._resultEl.style.display = 'none';
-    this._menuEl.style.display   = 'flex';
+    this._hideAllOverlays();
+    this._menuEl.style.display = 'flex';
     this.setState(GS.MENU);
+  }
+
+  returnToLevelSelect() {
+    this._showLevelSelect();
   }
 
   // Play a generated custom level
