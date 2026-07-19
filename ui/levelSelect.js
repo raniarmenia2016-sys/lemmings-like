@@ -28,6 +28,18 @@ export class LevelSelectScreen {
         <button class="ls-tab"        data-world="hard">🔴 קשה</button>
       </div>
       <div id="ls-grid"></div>
+      <section id="ls-keyboard-help" aria-label="פקדי מקלדת">
+        <strong>פקדי מקלדת</strong>
+        <span><kbd>Tab</kbd> מעבר בין שחקנים</span>
+        <span><kbd>1</kbd>-<kbd>0</kbd> בחירת מיומנות</span>
+        <span><kbd>Enter</kbd>/<kbd>Space</kbd> הקצאה</span>
+        <span><kbd>←</kbd><kbd>→</kbd> גלילה</span>
+        <span><kbd>P</kbd> השהיה</span>
+        <span><kbd>F</kbd> מהיר</span>
+        <span><kbd>N</kbd> נקה</span>
+        <span><kbd>Esc</kbd> יציאה</span>
+        <small>1 בנאי, 2 חפר, 3 חוסם, 4 צנחן, 5 כרטיס, 6 מטפס, 7 ספרינטר, 8 שוער, 9 קלע, 0 מפרץ</small>
+      </section>
       <div id="ls-bottom">
         <button id="ls-designer-btn">🎨 עצב שלב חדש</button>
       </div>
